@@ -1,3 +1,4 @@
+import { Op } from "sequelize";
 import logger from "../config/logger.config";
 import Hotel from "../db/models/hotel";
 import { createHotelDto } from "../dto/hotel.dto";
@@ -22,7 +23,12 @@ export const createHotel = async(hotelData:createHotelDto) =>{
 
 export const getHotelById = async(hotelId:number) =>{
     try {
-        const hotel = await Hotel.findByPk(hotelId);
+        const hotel = await Hotel.findOne({
+            where:{
+                id:hotelId,
+                deletedAt:null
+            }
+        });
         if(!hotel){
             logger.warn(`Hotel not found with id: ${hotelId}`);
            throw new NotFoundError('Hotel not found');
@@ -37,7 +43,11 @@ export const getHotelById = async(hotelId:number) =>{
 
 export const getAllHotels = async()=>{
     try {
-        const hotels = await Hotel.findAll();
+        const hotels = await Hotel.findAll({
+            where:{
+                deletedAt:null
+            }
+        });
         return hotels;
         
     } catch (error) {
@@ -48,7 +58,12 @@ export const getAllHotels = async()=>{
 
 export const updateHotel = async(hotelId:number,hotelData:Partial<createHotelDto>)=>{
     try {
-        const hotel = await Hotel.findByPk(hotelId);
+        const hotel = await Hotel.findOne({
+            where:{
+                id:hotelId,
+                deletedAt:null
+            }
+        });
         if(!hotel){
             logger.warn(`Hotel not found with id: ${hotelId}`);
             throw new NotFoundError('Hotel not found');
@@ -70,8 +85,9 @@ export const deleteHotel = async(hotelId:number) => {
             logger.warn(`Hotel not found with id: ${hotelId}`);
             throw new NotFoundError('Hotel not found');
         }
-        await hotel.destroy();
-        logger.info(`Hotel deleted with id: ${hotelId}`);
+        hotel.deletedAt = new Date();
+        await hotel.save();
+        logger.info(`Hotel soft deleted with id: ${hotelId}`);
         return;
     } catch (error) {
         logger.error(`Error deleting hotel with id ${hotelId}: ${error}`);
